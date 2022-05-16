@@ -1,0 +1,55 @@
+name: Submit Microsoft.PowerToys package to Windows Store
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+
+  microsoft_store:
+    name: Publish Microsoft Store
+    runs-on: windows-latest
+    steps:
+      - name: Get latest Version and URL from public releases
+        id: releaseVars
+        run: |
+          $github = Invoke-RestMethod -uri "https://api.github.com/repos/Microsoft/PowerToys/releases" 
+          
+          $targetRelease = $github | Where-Object -Property name -match 'Release'| Select -First 1
+          echo ::set-output name=powerToysInstallerUrl::$( $targetRelease | Select -ExpandProperty assets -First 1 | Where-Object -Property name -match 'PowerToysSetup' | Select -ExpandProperty browser_download_url )
+
+      - name: Configure Store Credentials
+        uses: ./.github/store-submission/
+        with:
+          command: configure
+          type: win32
+          seller-id: ${{ secrets.SELLER_ID }}
+          product-id: ${{ secrets.PRODUCT_ID }}
+          tenant-id: ${{ secrets.TENANT_ID }}
+          client-id: ${{ secrets.CLIENT_ID }}
+          client-secret: ${{ secrets.CLIENT_SECRET }}
+
+      - name: Update draft submission
+        uses: ./.github/store-submission/
+        with:
+          command: update
+          product-update: '{
+              "packages":[
+                  {
+                    "packageUrl":"${{ needs.releaseVars.outputs.powerToysInstallerUrl }}",
+                    "languages":[
+                        "en"
+                    ],
+                    "architectures":[
+                        "X64"
+                    ],
+                    "isSilentInstall":true
+                  }
+              ]
+            }'
+
+      - name: Publish to Microsoft Store
+        uses: ./.github/store-submission/
+        with: 
+          command: publish

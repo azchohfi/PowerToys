@@ -9,7 +9,7 @@ jobs:
 
   microsoft_store:
     name: Publish Microsoft Store
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       # Shouldn't be needed once store-submission is public
       - name: Checkout repository
@@ -18,10 +18,7 @@ jobs:
       - name: Get latest Version and URL from public releases
         id: releaseVars
         run: |
-          $github = Invoke-RestMethod -uri "https://api.github.com/repos/Microsoft/PowerToys/releases" 
-          
-          $targetRelease = $github | Where-Object -Property name -match 'Release'| Select -First 1
-          echo ::set-output name=powerToysInstallerUrl::$( $targetRelease | Select -ExpandProperty assets -First 1 | Where-Object -Property name -match 'PowerToysSetup' | Select -ExpandProperty browser_download_url )
+          echo ::set-output name=powerToysInstallerUrl::$(curl https://api.github.com/repos/Microsoft/PowerToys/releases | jq '[.[]|select(.name | contains("Release"))][0].assets' | jq '[.[]|select(.name | contains("PowerToysSetup"))][0].browser_download_url')
 
       - name: Configure Store Credentials
         uses: ./.github/store-submission/

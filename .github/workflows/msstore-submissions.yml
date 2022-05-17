@@ -11,6 +11,10 @@ jobs:
     name: Publish Microsoft Store
     runs-on: windows-latest
     steps:
+      # Shouldn't be needed once store-submission is public
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
       - name: Get latest Version and URL from public releases
         id: releaseVars
         run: |

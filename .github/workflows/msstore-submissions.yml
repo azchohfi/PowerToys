@@ -18,7 +18,7 @@ jobs:
       - name: Get latest Version and URL from public releases
         id: releaseVars
         run: |
-          echo ::set-output name=powerToysInstallerUrl::$(curl https://api.github.com/repos/Microsoft/PowerToys/releases | jq '[.[]|select(.name | contains("Release"))][0].assets' | jq '[.[]|select(.name | contains("PowerToysSetup"))][0].browser_download_url')
+          echo ::set-output name=powerToysInstallerUrl::$(curl https://api.github.com/repos/Microsoft/PowerToys/releases | jq '[.[]|select(.name | contains("Release"))][0].assets' | jq -r '[.[]|select(.name | contains("PowerToysSetup"))][0].browser_download_url')
 
       - name: Configure Store Credentials
         uses: ./.github/store-submission/

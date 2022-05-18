@@ -41,7 +41,7 @@ jobs:
           product-update: '{
               "packages":[
                   {
-                    "packageUrl":"${{ needs.releaseVars.outputs.powerToysInstallerUrl }}",
+                    "packageUrl":"${{ steps.releaseVars.outputs.powerToysInstallerUrl }}",
                     "languages":[
                         "en"
                     ],

@@ -42,6 +42,33 @@ class SubmissionStatus {
   hasFailed: boolean;
 }
 
+class ListingAssetsResponse {
+  listingAssets: ListingAsset[];
+}
+
+class ImageSize {
+  width: number;
+  height: number;
+}
+
+class ListingAsset {
+  language: string;
+  storeLogos: StoreLogo[];
+  screenshots: Screenshot[];
+}
+
+class Screenshot {
+  id: string;
+  assetUrl: string;
+  imageSize: ImageSize;
+}
+
+class StoreLogo {
+  id: string;
+  assetUrl: string;
+  imageSize: ImageSize;
+}
+
 export class StoreApis {
   private static readonly microsoftOnlineLoginHost =
     "login.microsoftonline.com";
@@ -137,6 +164,16 @@ export class StoreApis {
     );
   }
 
+  private UpdateCurrentDraftSubmissionMetadata(
+    submissionMetadata: string
+  ): Promise<ResponseWrapper<unknown>> {
+    return this.CreateStoreHttpRequest(
+      JSON.stringify(submissionMetadata),
+      "PUT",
+      `/submission/v1/product/${this.productId}/metadata`
+    );
+  }
+
   private async UpdateStoreSubmissionPackages(
     submission: unknown
   ): Promise<ResponseWrapper<unknown>> {
@@ -182,6 +219,16 @@ export class StoreApis {
       "",
       "POST",
       `/submission/v1/product/${this.productId}/submit`
+    );
+  }
+
+  private async GetCurrentDraftListingAssets(
+    listingLanguages: string
+  ): Promise<ResponseWrapper<ListingAssetsResponse>> {
+    return this.CreateStoreHttpRequest(
+      "",
+      "GET",
+      `/submission/v1/product/${this.productId}/listings/assets?languages=${listingLanguages}`
     );
   }
 
@@ -368,6 +415,38 @@ export class StoreApis {
     });
   }
 
+  public async UpdateSubmissionMetadata(
+    submissionMetadataString: string
+  ): Promise<unknown> {
+    if (!(await this.PollModuleStatus())) {
+      // Wait until all modules are in the ready state
+      return Promise.reject("Failed to poll module status.");
+    }
+
+    const submissionMetadata = JSON.parse(submissionMetadataString);
+
+    console.log(submissionMetadata);
+
+    const updateSubmissionData =
+      await this.UpdateCurrentDraftSubmissionMetadata(submissionMetadata);
+    console.log(JSON.stringify(updateSubmissionData));
+
+    if (!updateSubmissionData.isSuccess) {
+      return Promise.reject(
+        `Failed to update submission metadata - ${JSON.stringify(
+          updateSubmissionData.errors
+        )}`
+      );
+    }
+
+    if (!(await this.PollModuleStatus())) {
+      // Wait until all modules are in the ready state
+      return Promise.reject("Failed to poll module status.");
+    }
+
+    return updateSubmissionData;
+  }
+
   public async UpdateProductPackages(
     updatedProductString: string
   ): Promise<unknown> {
@@ -455,6 +534,32 @@ export class StoreApis {
       } else {
         resolve(submissionId);
       }
+    });
+  }
+
+  public async GetExistingDraftListingAssets(
+    listingLanguage: string
+  ): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      this.GetCurrentDraftListingAssets(listingLanguage)
+        .then((draftListingAssetsResponse) => {
+          if (!draftListingAssetsResponse.isSuccess) {
+            reject(
+              `Failed to get the existing draft listing assets. - ${JSON.stringify(
+                draftListingAssetsResponse,
+                null,
+                2
+              )}`
+            );
+          } else {
+            resolve(JSON.stringify(draftListingAssetsResponse.responseData));
+          }
+        })
+        .catch((error) => {
+          reject(
+            `Failed to get the existing draft listing assets. - ${error.errors}`
+          );
+        });
     });
   }
 

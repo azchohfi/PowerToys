@@ -76,13 +76,20 @@ const store_apis_1 = __nccwpck_require__(605);
                     break;
                 }
                 case "update": {
+                    const updatedMetadataString = core.getInput("metadata-update");
                     const updatedProductString = core.getInput("product-update");
-                    if (!updatedProductString) {
-                        core.setFailed(`product-update parameter cannot be empty.`);
+                    if (!updatedMetadataString && !updatedProductString) {
+                        core.setFailed(`Nothing to update. Both product-update and metadata-update are null.`);
                         return;
                     }
-                    const updateSubmissionData = yield storeApis.UpdateProductPackages(updatedProductString);
-                    console.log(updateSubmissionData);
+                    if (updatedMetadataString) {
+                        const updateSubmissionMetadata = yield storeApis.UpdateSubmissionMetadata(updatedMetadataString);
+                        console.log(updateSubmissionMetadata);
+                    }
+                    if (updatedProductString) {
+                        const updateSubmissionData = yield storeApis.UpdateProductPackages(updatedProductString);
+                        console.log(updateSubmissionData);
+                    }
                     break;
                 }
                 case "poll": {
@@ -277,6 +284,98 @@ class SubmissionStatus {
         });
     }
 }
+class ListingAssetsResponse {
+    constructor() {
+        Object.defineProperty(this, "listingAssets", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+    }
+}
+class ImageSize {
+    constructor() {
+        Object.defineProperty(this, "width", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "height", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+    }
+}
+class ListingAsset {
+    constructor() {
+        Object.defineProperty(this, "language", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "storeLogos", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "screenshots", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+    }
+}
+class Screenshot {
+    constructor() {
+        Object.defineProperty(this, "id", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "assetUrl", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "imageSize", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+    }
+}
+class StoreLogo {
+    constructor() {
+        Object.defineProperty(this, "id", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "assetUrl", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+        Object.defineProperty(this, "imageSize", {
+            enumerable: true,
+            configurable: true,
+            writable: true,
+            value: void 0
+        });
+    }
+}
 class StoreApis {
     constructor() {
         Object.defineProperty(this, "accessToken", {
@@ -373,6 +472,9 @@ class StoreApis {
     GetCurrentDraftSubmissionMetadata(moduleName, listingLanguages) {
         return this.CreateStoreHttpRequest("", "GET", `/submission/v1/product/${this.productId}/metadata/${moduleName}?languages=${listingLanguages}`);
     }
+    UpdateCurrentDraftSubmissionMetadata(submissionMetadata) {
+        return this.CreateStoreHttpRequest(JSON.stringify(submissionMetadata), "PUT", `/submission/v1/product/${this.productId}/metadata`);
+    }
     UpdateStoreSubmissionPackages(submission) {
         return __awaiter(this, void 0, void 0, function* () {
             return this.CreateStoreHttpRequest(JSON.stringify(submission), "PUT", `/submission/v1/product/${this.productId}/packages`);
@@ -396,6 +498,11 @@ class StoreApis {
     SubmitSubmission() {
         return __awaiter(this, void 0, void 0, function* () {
             return this.CreateStoreHttpRequest("", "POST", `/submission/v1/product/${this.productId}/submit`);
+        });
+    }
+    GetCurrentDraftListingAssets(listingLanguages) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.CreateStoreHttpRequest("", "GET", `/submission/v1/product/${this.productId}/listings/assets?languages=${listingLanguages}`);
         });
     }
     CreateStoreHttpRequest(requestParameters, method, path) {
@@ -545,6 +652,26 @@ class StoreApis {
             }));
         });
     }
+    UpdateSubmissionMetadata(submissionMetadataString) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!(yield this.PollModuleStatus())) {
+                // Wait until all modules are in the ready state
+                return Promise.reject("Failed to poll module status.");
+            }
+            const submissionMetadata = JSON.parse(submissionMetadataString);
+            console.log(submissionMetadata);
+            const updateSubmissionData = yield this.UpdateCurrentDraftSubmissionMetadata(submissionMetadata);
+            console.log(JSON.stringify(updateSubmissionData));
+            if (!updateSubmissionData.isSuccess) {
+                return Promise.reject(`Failed to update submission metadata - ${JSON.stringify(updateSubmissionData.errors)}`);
+            }
+            if (!(yield this.PollModuleStatus())) {
+                // Wait until all modules are in the ready state
+                return Promise.reject("Failed to poll module status.");
+            }
+            return updateSubmissionData;
+        });
+    }
     UpdateProductPackages(updatedProductString) {
         return __awaiter(this, void 0, void 0, function* () {
             if (!(yield this.PollModuleStatus())) {
@@ -604,6 +731,24 @@ class StoreApis {
                 else {
                     resolve(submissionId);
                 }
+            });
+        });
+    }
+    GetExistingDraftListingAssets(listingLanguage) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Promise((resolve, reject) => {
+                this.GetCurrentDraftListingAssets(listingLanguage)
+                    .then((draftListingAssetsResponse) => {
+                    if (!draftListingAssetsResponse.isSuccess) {
+                        reject(`Failed to get the existing draft listing assets. - ${JSON.stringify(draftListingAssetsResponse, null, 2)}`);
+                    }
+                    else {
+                        resolve(JSON.stringify(draftListingAssetsResponse.responseData));
+                    }
+                })
+                    .catch((error) => {
+                    reject(`Failed to get the existing draft listing assets. - ${error.errors}`);
+                });
             });
         });
     }

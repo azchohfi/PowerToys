@@ -18,7 +18,12 @@ jobs:
       - name: Get latest Version and URL from public releases
         id: releaseVars
         run: |
-          echo ::set-output name=powerToysInstallerUrl::$(curl https://api.github.com/repos/Microsoft/PowerToys/releases | jq '[.[]|select(.name | contains("Release"))][0].assets' | jq -r '[.[]|select(.name | contains("PowerToysSetup"))][0].browser_download_url')
+          release=$(curl https://api.github.com/repos/Microsoft/PowerToys/releases | jq '[.[]|select(.name | contains("Release"))][0]')
+          assets=$(jq -n "$release" | jq '.assets')
+          whatsNew=$(jq -n "$release" | jq -r '.body')
+          powerToysSetup=$(jq -n "$assets" | jq '[.[]|select(.name | contains("PowerToysSetup"))]')
+          echo ::set-output name=powerToysInstallerX64Url::$(jq -n "$powerToysSetup" | jq -r '[.[]|select(.name | contains("x64"))][0].browser_download_url')
+          echo ::set-output name=powerToysWhatsNew::$(whatsNew)
 
       - name: Configure Store Credentials
         uses: ./.github/store-submission/
@@ -38,19 +43,25 @@ jobs:
           product-update: '{
               "packages":[
                   {
-                    "packageUrl":"${{ steps.releaseVars.outputs.powerToysInstallerUrl }}",
-                    "languages":[
-                        "en"
-                    ],
-                    "architectures":[
-                        "X64"
-                    ],
+                    "packageUrl":"${{ steps.releaseVars.outputs.powerToysInstallerX64Url }}",
+                    "languages":["zh-hans", "zh-hant", "en", "cs", "nl", "fr", "pt", "pt-br", "de", "hu", "it", "ja", "ko", "pl", "ru", "es", "tr"],
+                    "architectures":["X64"],
+                    "installerParameters":"-passive",
                     "isSilentInstall":true
                   }
               ]
             }'
 
-      - name: Publish to Microsoft Store
-        uses: ./.github/store-submission/
-        with: 
-          command: publish
+          metadata-update: '{
+              "listings": [
+                {
+                  "language": "en",
+                  "description": "Microsoft PowerToys is a set of utilities for power users to tune and streamline their Windows 10 and 11 experience for greater productivity.",
+                  "whatsNew": "${{ steps.releaseVars.outputs.powerToysWhatsNew }}",
+                  "productFeatures": ["FancyZones", "PowerRename", "Color Picker", "Keyboard Manager", "Shortcut Guide", "PowerToys Run", "Awake", "Image Resizer", "SVG thumbnails", "Markdown file explorer preview pane", "SVG file explorer preview pane", "Find my mouse", "always on top"],
+                  "shortDescription": "Microsoft PowerToys is a set of utilities for power users to tune and streamline their Windows 10 experience for greater productivity. For more info on PowerToys overviews and guides, or any other tools and resources for Windows development environments, head over to docs.microsoft.com!",
+                  "searchTerms": ["PowerToys", "Fancy Zones", "FancyZones", "PowerRename", "Power Toys", "color picker", "Find my mouse"],
+                  "additionalLicenseTerms": "https://aka.ms/powertoys-license"
+                }
+              ]
+            }'

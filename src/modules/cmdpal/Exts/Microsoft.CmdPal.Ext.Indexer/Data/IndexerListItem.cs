@@ -3,9 +3,11 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
+using System.Globalization;
 using Microsoft.CmdPal.Ext.Indexer.Commands;
 using Microsoft.CmdPal.Ext.Indexer.Properties;
 using Microsoft.CommandPalette.Extensions.Toolkit;
+using Windows.Foundation.Metadata;
 
 namespace Microsoft.CmdPal.Ext.Indexer.Data;
 
@@ -39,6 +41,43 @@ internal sealed partial class IndexerListItem : ListItem
         }
 
         List<CommandContextItem> actions = [];
+
+        string extension = System.IO.Path.GetExtension(indexerItem.FullPath).ToLower(CultureInfo.InvariantCulture);
+
+        if (extension != null && ApiInformation.IsApiContractPresent("Windows.AI.Actions.ActionsContract", 1))
+        {
+            var actionRuntime = ActionRuntimeFactory.CreateActionRuntime();
+
+            var availableActions = actionRuntime.ActionCatalog.GetAllActions();
+
+            foreach (var action in availableActions)
+            {
+                var overloads = action.GetOverloads();
+                foreach (var overload in overloads)
+                {
+                    var inputs = overload.GetInputs();
+
+                    // Check if the overload has a single input
+                    if (inputs.Length != 1)
+                    {
+                        continue;
+                    }
+
+                    foreach (var input in inputs)
+                    {
+                        if (((extension == ".jpg" || extension == ".jpeg" || extension == ".png") &&
+                                input.Kind == global::Windows.AI.Actions.ActionEntityKind.Photo) ||
+                            ((extension == ".docx" || extension == ".doc" || extension == ".pdf" || extension == ".txt") &&
+                                input.Kind == global::Windows.AI.Actions.ActionEntityKind.Document) ||
+                            input.Kind == global::Windows.AI.Actions.ActionEntityKind.File)
+                        {
+                            actions.Add(new CommandContextItem(new ExecuteActionCommand(indexerItem, actionRuntime, action, overload)));
+                            break;
+                        }
+                    }
+                }
+            }
+        }
 
         MoreCommands = [
             ..context,

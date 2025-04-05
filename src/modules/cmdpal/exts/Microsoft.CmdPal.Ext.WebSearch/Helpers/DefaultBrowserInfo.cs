@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 
@@ -186,17 +187,20 @@ public static class DefaultBrowserInfo
                 {
                     var buffer = stackalloc char[128];
                     var capacity = 128;
-                    void* reserved = null;
+                    char firstChar = str[0];
+                    char* strPtr = &firstChar;
 
                     // S_OK == 0
-                    if (global::Windows.Win32.PInvoke.SHLoadIndirectString(
-                            str,
+                    fixed (char* pszSourceLocal = str)
+                    {
+                        if (global::Windows.Win32.PInvoke.SHLoadIndirectString(
+                            pszSourceLocal,
                             buffer,
                             (uint)capacity,
-                            ref reserved)
-                        == 0)
-                    {
-                        return new string(buffer);
+                            default) == 0)
+                        {
+                            return new string(buffer);
+                        }
                     }
                 }
 

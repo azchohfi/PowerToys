@@ -82,7 +82,7 @@ internal sealed class SearchResult
 
     private static string GetStringFromPropVariant(ref PROPVARIANT propVariant)
     {
-        if (propVariant.Anonymous.Anonymous.vt == VARENUM.VT_LPWSTR)
+        if (propVariant.Anonymous.Anonymous.vt == global::Windows.Win32.System.Variant.VARENUM.VT_LPWSTR)
         {
             var pwszVal = propVariant.Anonymous.Anonymous.Anonymous.pwszVal;
             if (pwszVal != null)

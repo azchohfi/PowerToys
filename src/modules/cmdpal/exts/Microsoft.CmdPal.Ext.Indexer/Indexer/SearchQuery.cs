@@ -309,9 +309,11 @@ internal sealed partial class SearchQuery : IDisposable
             }
 
             commandText.SetCommandText(in NativeHelpers.OleDb.DbGuidDefault, queryStr);
-            commandText.Execute(null, typeof(IRowset).GUID, null, null, out var rowsetPointer);
+            IUnknown* rowsetPointer;
+            var rowsetGuid = typeof(IRowset).GUID;
+            commandText.Execute(null, &rowsetGuid, null, null, &rowsetPointer);
 
-            return rowsetPointer as IRowset;
+            return (IRowset)Marshal.GetObjectForIUnknown((nint)rowsetPointer);
         }
         catch (Exception ex)
         {
@@ -443,7 +445,7 @@ internal sealed partial class SearchQuery : IDisposable
             return 0;
         }
 
-        if (prop?.vValue.Anonymous.Anonymous.vt == VARENUM.VT_UI4)
+        if (prop?.vValue.Anonymous.Anonymous.vt == global::Windows.Win32.System.Variant.VARENUM.VT_UI4)
         {
             var value = prop?.vValue.Anonymous.Anonymous.Anonymous.ulVal;
             return (uint)value;

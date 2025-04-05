@@ -62,7 +62,11 @@ public sealed partial class MainWindow : Window,
         InitializeComponent();
 
         _hwnd = new HWND(WinRT.Interop.WindowNative.GetWindowHandle(this).ToInt32());
-        CommandPaletteHost.SetHostHwnd((ulong)_hwnd.Value);
+
+        unsafe
+        {
+            CommandPaletteHost.SetHostHwnd((ulong)_hwnd.Value);
+        }
 
         // TaskbarCreated is the message that's broadcast when explorer.exe
         // restarts. We need to know when that happens to be able to bring our

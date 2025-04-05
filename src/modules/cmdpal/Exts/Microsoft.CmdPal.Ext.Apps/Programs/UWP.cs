@@ -64,7 +64,7 @@ public partial class UWP
 
         const uint noAttribute = 0x80;
 
-        var access = (uint)STGM.READ;
+        var access = (uint)Native.STGM.READ;
         var hResult = PInvoke.SHCreateStreamOnFileEx(path, access, noAttribute, false, null, out IStream stream);
 
         // S_OK

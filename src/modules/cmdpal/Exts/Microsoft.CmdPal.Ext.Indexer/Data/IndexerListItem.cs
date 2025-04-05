@@ -38,9 +38,12 @@ internal sealed partial class IndexerListItem : ListItem
             }
         }
 
+        List<CommandContextItem> actions = [];
+
         MoreCommands = [
             ..context,
             new CommandContextItem(new OpenWithCommand(indexerItem)),
+            ..actions,
             new CommandContextItem(new ShowFileInFolderCommand(indexerItem.FullPath) { Name = Resources.Indexer_Command_ShowInFolder }),
             new CommandContextItem(new CopyPathCommand(indexerItem)),
             new CommandContextItem(new OpenInConsoleCommand(indexerItem)),
